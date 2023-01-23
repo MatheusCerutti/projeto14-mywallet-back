@@ -3,6 +3,7 @@ import cors from "cors";
 import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import joi from "joi";
+import bcrypt from "bcrypt";
 
 const server = express();
 server.use(express.json());
@@ -46,8 +47,11 @@ server.post("/cadastro", async (req,res)=>{
         return res.status(422).send(validacao)
     }
     
+    //Mudar a senha
+    const novaSenha = bcrypt.hashSync(senha,10)
+
     try {
-        await db.collection("usuarios").insertOne({nome, email, senha, senhaConfirmada})
+        await db.collection("usuarios").insertOne({nome, email, senha:novaSenha})
         res.status(201).send("Ok");
 
     } catch (error) {
@@ -56,6 +60,58 @@ server.post("/cadastro", async (req,res)=>{
 
 })
 
+//Cadastrar receita
+
+server.post("/nova-entrada", async (req,res)=>{
+    const {valor, descricao} = req.body
+
+    //Validar a receita
+    const validaReceita = joi.object({
+        valor: joi.number().required(),
+        descricao: joi.string().required()
+    })
+
+    const validacao = validaReceita.validate({ valor,descricao });
+
+    if (validacao.error) {
+        return res.status(422).send(validacao)
+    }
+
+    try {
+        await db.collection("historico").insertOne({valor, descricao, tipo: "Receita"})
+        res.status(201).send("Ok");
+
+    } catch (error) {
+        res.status(500).send("Deu erro no bd")
+    }
+
+})
+
+//Cadastrar despesa
+server.post("/nova-saida", async (req,res)=>{
+    const {valor, descricao} = req.body
+
+    //Validar a despesa
+    const validaDespesa = joi.object({
+        valor: joi.number().required(),
+        descricao: joi.string().required()
+    })
+
+    const validacao = validaDespesa.validate({ valor,descricao });
+
+    if (validacao.error) {
+        return res.status(422).send(validacao)
+    }
+
+    try {
+        await db.collection("historico").insertOne({valor, descricao, tipo: "Despesa"})
+        res.status(201).send("Ok");
+
+    } catch (error) {
+        res.status(500).send("Deu erro no bd")
+    }
+
+})
 
 
 
