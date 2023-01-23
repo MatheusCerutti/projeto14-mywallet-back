@@ -39,9 +39,9 @@ export async function cadastrar(req,res) {
 
 export async function logar(req,res) {
 
-    const { nome, senha } = req.body
+    const { email, senha } = req.body
 
-    const usuario = await db.collection("usuarios").findOne({ nome })
+    const usuario = await db.collection("usuarios").findOne({ email })
 
     if (usuario && bcrypt.compareSync(senha, usuario.senha)) {
         const token = uuid();

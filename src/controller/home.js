@@ -19,7 +19,9 @@ export async function carregarlancamentos(req,res){
 
     if (user) {
         try {
-            const registros = await db.collection("historico").find().toArray()
+            const registros = await db.collection("historico").find(
+                {usuario:session.userId}
+            ).toArray()
 
             return res.send(registros)
         } catch (error) {
