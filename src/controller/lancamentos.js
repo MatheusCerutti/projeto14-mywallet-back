@@ -31,7 +31,7 @@ export async function receitas(req, res) {
             const validacao = validaReceita.validate({ valor, descricao });
 
             if (validacao.error) {
-                return res.status(422).send(validacao)
+                return res.status(421).send(validacao.error)
             }
 
             try {
@@ -67,6 +67,17 @@ export async function despesas(req, res) {
         return res.status(422).send("Informe o token");
     }
 
+    const session = await db.collection("sessions").findOne({ token });
+    if (!session) {
+        return res.sendStatus(401);
+    }
+
+    const user = await db.collection("usuarios").findOne({
+        _id: session.userId
+    })
+
+    if (user) {
+
     //Validar a despesa
     const validaDespesa = joi.object({
         valor: joi.number().required(),
@@ -84,10 +95,10 @@ export async function despesas(req, res) {
         if (!session) {
             return res.status(401).send("Você não tem autorização");
         }
-        await db.collection("historico").insertOne({ valor, descricao, tipo: "Despesa" })
+        await db.collection("historico").insertOne({ valor, descricao, tipo: "Despesa",usuario:session.userId  })
         res.status(201).send("Ok");
 
     } catch (error) {
         res.status(500).send("Deu erro no bd")
-    }
+    }} else {res.sendStatus(401);}
 }
