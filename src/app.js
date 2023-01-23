@@ -28,42 +28,42 @@ try {
 
 //Cadastrar usuário
 
-server.post("/cadastro", async (req,res)=>{
+server.post("/cadastro", async (req, res) => {
 
-    const {nome,email,senha, senhaConfirmada} = req.body;
+    const { nome, email, senha, senhaConfirmada } = req.body;
 
     //Validação do usuário
     const validaCadastro = joi.object({
-        nome:joi.string().required(),
-        email:joi.string().required(),
-        senha:joi.string().required(),
-        senhaConfirmada:joi.string().required().valid(senha)
+        nome: joi.string().required(),
+        email: joi.string().required(),
+        senha: joi.string().required(),
+        senhaConfirmada: joi.string().required().valid(senha)
 
     })
 
-    const validacao = validaCadastro.validate({ nome,email,senha,senhaConfirmada });
+    const validacao = validaCadastro.validate({ nome, email, senha, senhaConfirmada });
 
     if (validacao.error) {
         return res.status(422).send(validacao)
     }
-    
+
     //Mudar a senha
-    const novaSenha = bcrypt.hashSync(senha,10)
+    const novaSenha = bcrypt.hashSync(senha, 10)
 
     try {
-        await db.collection("usuarios").insertOne({nome, email, senha:novaSenha})
+        await db.collection("usuarios").insertOne({ nome, email, senha: novaSenha })
         res.status(201).send("Ok");
 
     } catch (error) {
-         res.status(500).send("Deu erro no bd")
+        res.status(500).send("Deu erro no bd")
     }
 
 })
 
 //Cadastrar receita
 
-server.post("/nova-entrada", async (req,res)=>{
-    const {valor, descricao} = req.body
+server.post("/nova-entrada", async (req, res) => {
+    const { valor, descricao } = req.body
 
     //Validar a receita
     const validaReceita = joi.object({
@@ -71,14 +71,14 @@ server.post("/nova-entrada", async (req,res)=>{
         descricao: joi.string().required()
     })
 
-    const validacao = validaReceita.validate({ valor,descricao });
+    const validacao = validaReceita.validate({ valor, descricao });
 
     if (validacao.error) {
         return res.status(422).send(validacao)
     }
 
     try {
-        await db.collection("historico").insertOne({valor, descricao, tipo: "Receita"})
+        await db.collection("historico").insertOne({ valor, descricao, tipo: "Receita" })
         res.status(201).send("Ok");
 
     } catch (error) {
@@ -88,8 +88,9 @@ server.post("/nova-entrada", async (req,res)=>{
 })
 
 //Cadastrar despesa
-server.post("/nova-saida", async (req,res)=>{
-    const {valor, descricao} = req.body
+
+server.post("/nova-saida", async (req, res) => {
+    const { valor, descricao } = req.body
 
     //Validar a despesa
     const validaDespesa = joi.object({
@@ -97,14 +98,14 @@ server.post("/nova-saida", async (req,res)=>{
         descricao: joi.string().required()
     })
 
-    const validacao = validaDespesa.validate({ valor,descricao });
+    const validacao = validaDespesa.validate({ valor, descricao });
 
     if (validacao.error) {
         return res.status(422).send(validacao)
     }
 
     try {
-        await db.collection("historico").insertOne({valor, descricao, tipo: "Despesa"})
+        await db.collection("historico").insertOne({ valor, descricao, tipo: "Despesa" })
         res.status(201).send("Ok");
 
     } catch (error) {
@@ -113,6 +114,18 @@ server.post("/nova-saida", async (req,res)=>{
 
 })
 
+//Buscar historico de lancamentos
+
+server.get("/home", async (req, res) => {
+    try {
+        const registros = await db.collection("historico").find().toArray()
+
+        return res.send(registros)
+    } catch (error) {
+        console.error(error)
+        console.log("Erro ao conectar no banco de dados")
+    }
+})
 
 
 
