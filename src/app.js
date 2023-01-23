@@ -60,6 +60,21 @@ server.post("/cadastro", async (req, res) => {
 
 })
 
+//Logar com o usuário
+server.post("/",async(req,res)=>{
+
+    const {nome,senha} = req.body
+
+    const usuario = await db.collection("usuarios").findOne({nome})
+    
+    if (usuario && bcrypt.compareSync(senha,usuario.senha)){
+        res.status(201).send("ok")
+    } else {
+        return res.status(422).send("email ou senha incorretos")
+    }
+}
+)
+
 //Cadastrar receita
 
 server.post("/nova-entrada", async (req, res) => {
