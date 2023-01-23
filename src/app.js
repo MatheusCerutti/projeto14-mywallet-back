@@ -4,6 +4,9 @@ import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import joi from "joi";
 import bcrypt from "bcrypt";
+import { v4 as uuid } from 'uuid';
+
+
 
 const server = express();
 server.use(express.json());
@@ -61,14 +64,20 @@ server.post("/cadastro", async (req, res) => {
 })
 
 //Logar com o usuário
-server.post("/",async(req,res)=>{
+server.post("/", async (req, res) => {
 
-    const {nome,senha} = req.body
+    const { nome, senha } = req.body
 
-    const usuario = await db.collection("usuarios").findOne({nome})
-    
-    if (usuario && bcrypt.compareSync(senha,usuario.senha)){
-        res.status(201).send("ok")
+    const usuario = await db.collection("usuarios").findOne({ nome })
+
+    if (usuario && bcrypt.compareSync(senha, usuario.senha)) {
+        const token = uuid();
+
+        await db.collection("sessions").insertOne({
+            userId: usuario._id,
+            token
+        })
+        res.status(201).send(token)
     } else {
         return res.status(422).send("email ou senha incorretos")
     }
@@ -79,6 +88,14 @@ server.post("/",async(req,res)=>{
 
 server.post("/nova-entrada", async (req, res) => {
     const { valor, descricao } = req.body
+
+    const { authorization } = req.headers;
+    const token = authorization?.replace("Bearer ", "");
+
+    if (!token) {
+        return res.status(422).send("Informe o token");
+    }
+
 
     //Validar a receita
     const validaReceita = joi.object({
@@ -93,6 +110,10 @@ server.post("/nova-entrada", async (req, res) => {
     }
 
     try {
+        const session = await db.collection("sessions").findOne({ token });
+        if (!session) {
+            return res.status(401).send("Você não tem autorização");
+        }
         await db.collection("historico").insertOne({ valor, descricao, tipo: "Receita" })
         res.status(201).send("Ok");
 
@@ -106,6 +127,12 @@ server.post("/nova-entrada", async (req, res) => {
 
 server.post("/nova-saida", async (req, res) => {
     const { valor, descricao } = req.body
+    const { authorization } = req.headers;
+    const token = authorization?.replace("Bearer ", "");
+
+    if (!token) {
+        return res.status(422).send("Informe o token");
+    }
 
     //Validar a despesa
     const validaDespesa = joi.object({
@@ -120,6 +147,10 @@ server.post("/nova-saida", async (req, res) => {
     }
 
     try {
+        const session = await db.collection("sessions").findOne({ token });
+        if (!session) {
+            return res.status(401).send("Você não tem autorização");
+        }
         await db.collection("historico").insertOne({ valor, descricao, tipo: "Despesa" })
         res.status(201).send("Ok");
 
@@ -132,15 +163,36 @@ server.post("/nova-saida", async (req, res) => {
 //Buscar historico de lancamentos
 
 server.get("/home", async (req, res) => {
-    try {
-        const registros = await db.collection("historico").find().toArray()
+    const { authorization } = req.headers;
+    const token = authorization?.replace("Bearer ", "");
 
-        return res.send(registros)
-    } catch (error) {
-        console.error(error)
-        console.log("Erro ao conectar no banco de dados")
+    if (!token) {
+        return res.status(422).send("Informe o token");
     }
-})
+
+    const session = await db.collection("sessions").findOne({ token });
+    if (!session) {
+        return res.sendStatus(401);
+    }
+
+    const user = await db.collection("usuarios").findOne({
+        _id: session.userId
+    })
+
+    if (user) {
+        try {
+            const registros = await db.collection("historico").find().toArray()
+
+            return res.send(registros)
+        } catch (error) {
+            console.error(error)
+            console.log("Erro ao conectar no banco de dados")
+        }
+
+    } else {
+        res.sendStatus(401);
+    }
+});
 
 
 
